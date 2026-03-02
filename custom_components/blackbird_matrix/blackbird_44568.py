@@ -75,27 +75,38 @@ class Blackbird44568:
         return ret
 
     def _refresh_cache(self) -> None:
-        """Fetch r av out 0! and r hdmi 0 stream! and update caches."""
+        """Fetch r av out 0! and r hdmi 0 stream! and update caches.
+
+        The lock is held for the full refresh so that when 8 zones all call
+        zone_status() simultaneously, only the first thread does the two serial
+        queries; the rest wait, then find the cache warm and return immediately.
+        Without this, every zone sends its own query (thundering herd).
+        _send() re-acquires the RLock safely because RLock is reentrant.
+        """
         now = time.monotonic()
         if now - self._cache_time < self._cache_ttl:
             return
-        try:
-            av_resp = self._send("r av out 0")
-            stream_resp = self._send("r hdmi 0 stream")
-        except serial.SerialTimeoutException:
-            _LOGGER.warning("44568 cache refresh timed out")
-            return
-        self._video_cache = {}
-        for m in AV_PATTERN.finditer(av_resp):
-            in_id = int(m.group(1))
-            out_id = int(m.group(2))
-            self._video_cache[out_id] = in_id
-        self._power_cache = {}
-        for m in STREAM_PATTERN.finditer(stream_resp):
-            power = m.group(1).lower() == "enable"
-            out_id = int(m.group(2))
-            self._power_cache[out_id] = power
-        self._cache_time = now
+        with self._lock:
+            now = time.monotonic()          # re-check after acquiring lock
+            if now - self._cache_time < self._cache_ttl:
+                return                      # another thread already refreshed
+            try:
+                av_resp = self._send("r av out 0")
+                stream_resp = self._send("r hdmi 0 stream")
+            except serial.SerialTimeoutException:
+                _LOGGER.warning("44568 cache refresh timed out")
+                return
+            self._video_cache = {}
+            for m in AV_PATTERN.finditer(av_resp):
+                in_id = int(m.group(1))
+                out_id = int(m.group(2))
+                self._video_cache[out_id] = in_id
+            self._power_cache = {}
+            for m in STREAM_PATTERN.finditer(stream_resp):
+                power = m.group(1).lower() == "enable"
+                out_id = int(m.group(2))
+                self._power_cache[out_id] = power
+            self._cache_time = now
 
     def zone_status(self, zone: int) -> ZoneStatus | None:
         """Return status for the given zone (output) 1–8."""

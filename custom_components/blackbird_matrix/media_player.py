@@ -75,13 +75,19 @@ PLATFORM_SCHEMA = vol.All(
 )
 
 
-def setup_platform(
+async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
-    """Set up the Blackbird matrix platform (legacy, 39670, or 44568)."""
+    """Set up the Blackbird matrix platform (legacy, 39670, or 44568).
+
+    async_setup_platform (not setup_platform) is required so that entity
+    services like media_player.select_source are properly registered with
+    the entity platform dispatcher.  Blocking serial I/O is offloaded to
+    the executor.
+    """
     if DATA_BLACKBIRD not in hass.data:
         hass.data[DATA_BLACKBIRD] = {}
 
@@ -97,9 +103,11 @@ def setup_platform(
         if model == MODEL_44568:
             try:
                 from serial import SerialException
-                blackbird = Blackbird44568(port, baud=baud or 115200)
+                blackbird = await hass.async_add_executor_job(
+                    lambda: Blackbird44568(port, baud=baud or 115200)
+                )
                 connection = port
-            except SerialException as e:
+            except Exception as e:
                 _LOGGER.error(
                     "Error connecting to Blackbird 44568 at %s: %s", port, e
                 )
@@ -107,9 +115,11 @@ def setup_platform(
         elif model == MODEL_39670:
             try:
                 from serial import SerialException
-                blackbird = Blackbird39670(port, baud=baud or 9600)
+                blackbird = await hass.async_add_executor_job(
+                    lambda: Blackbird39670(port, baud=baud or 9600)
+                )
                 connection = port
-            except SerialException as e:
+            except Exception as e:
                 _LOGGER.error(
                     "Error connecting to Blackbird 39670 at %s: %s", port, e
                 )
@@ -117,10 +127,9 @@ def setup_platform(
         else:
             try:
                 from pyblackbird import get_blackbird
-                from serial import SerialException
-                blackbird = get_blackbird(port)
+                blackbird = await hass.async_add_executor_job(get_blackbird, port)
                 connection = port
-            except SerialException:
+            except Exception:
                 _LOGGER.error("Error connecting to the Blackbird controller")
                 return
 
@@ -130,9 +139,9 @@ def setup_platform(
             return
         try:
             from pyblackbird import get_blackbird
-            blackbird = get_blackbird(host, False)
+            blackbird = await hass.async_add_executor_job(get_blackbird, host, False)
             connection = host
-        except TimeoutError:
+        except Exception:
             _LOGGER.error("Error connecting to the Blackbird controller")
             return
 
@@ -154,7 +163,7 @@ def setup_platform(
 
     add_entities(devices, True)
 
-    def service_handle(service: ServiceCall) -> None:
+    async def async_service_handle(service: ServiceCall) -> None:
         entity_ids = service.data.get(ATTR_ENTITY_ID)
         source = service.data.get(ATTR_SOURCE)
         if entity_ids:
@@ -167,10 +176,11 @@ def setup_platform(
             devices_svc = list(hass.data[DATA_BLACKBIRD].values())
         for device in devices_svc:
             if service.service == SERVICE_SETALLZONES:
-                device.set_all_zones(source)
+                await hass.async_add_executor_job(device.set_all_zones, source)
 
-    hass.services.register(
-        DOMAIN, SERVICE_SETALLZONES, service_handle, schema=BLACKBIRD_SETALLZONES_SCHEMA
+    hass.services.async_register(
+        DOMAIN, SERVICE_SETALLZONES, async_service_handle,
+        schema=BLACKBIRD_SETALLZONES_SCHEMA,
     )
 
 
