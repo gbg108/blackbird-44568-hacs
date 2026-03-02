@@ -9,9 +9,14 @@ Home Assistant custom integration for **Monoprice Blackbird** matrix switches. S
 ## Install via HACS
 
 1. In HACS → **Integrations** → **⋮** → **Custom repositories**
-2. Add: `https://github.com/YOUR_USERNAME/blackbird-39670-hacs` (use your actual repo URL)
+2. Add this URL (use **HTTPS**, not SSH):
+   ```
+   https://github.com/gbg108/blackbird-44568-hacs
+   ```
 3. Category: **Integration**
 4. Click **Add**, then search for **Monoprice Blackbird Matrix Switch** and install.
+
+If you see "No manifest.json file found", use the HTTPS URL above (not `git@github.com:...`) and ensure the repo’s default branch (e.g. `main`) has been pushed with all files.
 
 After install, restart Home Assistant and set `model: 44568` (or `39670` / `legacy`) in your Blackbird `media_player` config (see below).
 
