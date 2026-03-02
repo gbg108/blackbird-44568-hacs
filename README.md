@@ -15,10 +15,9 @@ Home Assistant custom integration for **Monoprice Blackbird** matrix switches. S
    ```
 3. Category: **Integration**
 4. Click **Add**, then search for **Monoprice Blackbird Matrix Switch** and install.
+5. Restart Home Assistant.
 
-**Note:** This repo uses a zip release. You must have at least one [GitHub Release](https://github.com/gbg108/blackbird-44568-hacs/releases) with an asset named `blackbird_matrix.zip`. See **Publishing a release** below.
-
-Use **`platform: blackbird_matrix`** in your config (not `blackbird`) so Home Assistant uses this integration and accepts the `model` option. After install, restart Home Assistant.
+Use **`platform: blackbird_matrix`** in your config (not `blackbird`) so Home Assistant uses this integration and accepts the `model` option.
 
 ## Configuration
 
@@ -73,12 +72,6 @@ media_player:
 
 The **entire** HACS/repository content lives under this repository root (`blackbird-44568-hacs/`): `custom_components/blackbird_matrix/`, `hacs.json`, `README.md`, `info.md`, etc. There is no other copy of the integration in this repo. For local development, you can symlink your Home Assistant config’s `custom_components/blackbird_matrix` to `blackbird-44568-hacs/custom_components/blackbird_matrix` so the running instance uses this tree.
 
-## Publishing a release (for HACS)
+## Updating
 
-HACS expects a release asset named `blackbird_matrix.zip`. From the repo root:
-
-```bash
-zip -r blackbird_matrix.zip custom_components/
-```
-
-Then create a new [GitHub Release](https://github.com/gbg108/blackbird-44568-hacs/releases/new) (tag e.g. `v1.0.0`), attach `blackbird_matrix.zip`, and publish. HACS will offer that release when users install or update.
+In HACS, find **Monoprice Blackbird Matrix Switch**, click the three-dot menu, and choose **Update** (or **Redownload**). HACS installs directly from the `main` branch — no zip file or release asset is required.
