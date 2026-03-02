@@ -49,7 +49,13 @@ class Blackbird44568:
         self._cache_ttl = 2.0
 
     def _send(self, cmd: str) -> str:
-        """Send command (must end with !) and return full response."""
+        """Send command (must end with !) and return full response.
+
+        Mirrors the bash script approach: write the command, wait 350 ms for
+        the device to process it, then drain whatever arrived in the buffer.
+        The 50 ms inter-chunk loop handles multi-line responses (e.g. r av out 0!)
+        that arrive in several bursts.
+        """
         cmd = cmd.strip()
         if not cmd.endswith("!"):
             cmd += "!"
@@ -59,16 +65,11 @@ class Blackbird44568:
             self._port.reset_input_buffer()
             self._port.write(request)
             self._port.flush()
+            time.sleep(0.35)          # give device time to process & respond
             result = bytearray()
-            self._port.timeout = 0.05
-            self._port.inter_byte_timeout = 0.15
-            while True:
-                c = self._port.read(1)
-                if not c:
-                    break
-                result += c
-            self._port.timeout = TIMEOUT
-            self._port.inter_byte_timeout = None
+            while self._port.in_waiting:
+                result += self._port.read(self._port.in_waiting)
+                time.sleep(0.05)      # wait briefly in case more bytes follow
             ret = bytes(result).decode("ascii", errors="replace")
         _LOGGER.debug("44568 sent %r received %r", request, ret)
         return ret
