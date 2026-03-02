@@ -194,16 +194,17 @@ class BlackbirdZone(MediaPlayerEntity):
         self._zone_id = zone_id
         self._attr_name = zone_name
 
-    def update(self) -> None:
-        """Retrieve latest state."""
-        state = self._blackbird.zone_status(self._zone_id)
+    async def async_update(self) -> None:
+        """Retrieve latest state (runs in executor to avoid blocking the event loop)."""
+        state = await self.hass.async_add_executor_job(
+            self._blackbird.zone_status, self._zone_id
+        )
         if not state:
             return
         self._attr_state = (
             MediaPlayerState.ON if state.power else MediaPlayerState.OFF
         )
-        idx = state.av
-        self._attr_source = self._source_id_name.get(idx) if idx else None
+        self._attr_source = self._source_id_name.get(state.av) if state.av else None
 
     @property
     def media_title(self):
@@ -211,31 +212,43 @@ class BlackbirdZone(MediaPlayerEntity):
         return self.source
 
     def set_all_zones(self, source):
-        """Set all zones to one source."""
+        """Set all zones to one source (called from the custom service handler)."""
         if source not in self._source_name_id:
             return
         idx = self._source_name_id[source]
-        _LOGGER.debug("Setting all zones source to %s", idx)
+        _LOGGER.warning("Blackbird: set_all_zones → source=%s idx=%d", source, idx)
         self._blackbird.set_all_zone_source(idx)
-        self.schedule_update_ha_state()
 
-    def select_source(self, source: str) -> None:
-        """Set input source."""
+    async def async_select_source(self, source: str) -> None:
+        """Select input source."""
+        _LOGGER.warning(
+            "Blackbird: async_select_source called zone=%d source=%r",
+            self._zone_id, source,
+        )
         if source not in self._source_name_id:
+            _LOGGER.warning(
+                "Blackbird: source %r not in source list %s",
+                source, list(self._source_name_id),
+            )
             return
         idx = self._source_name_id[source]
-        _LOGGER.debug("Setting zone %d source to %s", self._zone_id, idx)
-        self._blackbird.set_zone_source(self._zone_id, idx)
-        self.schedule_update_ha_state()
+        _LOGGER.warning(
+            "Blackbird: routing input %d → output (zone) %d", idx, self._zone_id
+        )
+        await self.hass.async_add_executor_job(
+            self._blackbird.set_zone_source, self._zone_id, idx
+        )
 
-    def turn_on(self) -> None:
+    async def async_turn_on(self) -> None:
         """Turn the media player on."""
-        _LOGGER.debug("Turning zone %d on", self._zone_id)
-        self._blackbird.set_zone_power(self._zone_id, True)
-        self.schedule_update_ha_state()
+        _LOGGER.warning("Blackbird: async_turn_on zone=%d", self._zone_id)
+        await self.hass.async_add_executor_job(
+            self._blackbird.set_zone_power, self._zone_id, True
+        )
 
-    def turn_off(self) -> None:
+    async def async_turn_off(self) -> None:
         """Turn the media player off."""
-        _LOGGER.debug("Turning zone %d off", self._zone_id)
-        self._blackbird.set_zone_power(self._zone_id, False)
-        self.schedule_update_ha_state()
+        _LOGGER.warning("Blackbird: async_turn_off zone=%d", self._zone_id)
+        await self.hass.async_add_executor_job(
+            self._blackbird.set_zone_power, self._zone_id, False
+        )
