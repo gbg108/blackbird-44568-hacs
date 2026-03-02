@@ -48,6 +48,7 @@ SOURCE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
 
 CONF_ZONES = "zones"
 CONF_SOURCES = "sources"
+CONF_ENTITY_PREFIX = "entity_prefix"
 
 DATA_BLACKBIRD = "blackbird_matrix"
 
@@ -72,6 +73,7 @@ PLATFORM_SCHEMA = vol.All(
                 [MODEL_LEGACY, MODEL_39670, MODEL_44568]
             ),
             vol.Optional(CONF_BAUD): vol.All(vol.Coerce(int), vol.In([2400, 4800, 9600, 19200, 38400, 57600, 115200])),
+            vol.Optional(CONF_ENTITY_PREFIX, default=""): cv.string,
         }
     ),
 )
@@ -155,11 +157,14 @@ async def async_setup_platform(
         for source_id, extra in config[CONF_SOURCES].items()
     }
 
+    entity_prefix = config.get(CONF_ENTITY_PREFIX, "")
+
     devices = []
     for zone_id, extra in config[CONF_ZONES].items():
-        _LOGGER.debug("Adding zone %d - %s", zone_id, extra[CONF_NAME])
+        zone_name = extra[CONF_NAME]
+        _LOGGER.debug("Adding zone %d - %s", zone_id, zone_name)
         unique_id = f"{connection}-{zone_id}"
-        device = BlackbirdZone(blackbird, sources, zone_id, extra[CONF_NAME], unique_id)
+        device = BlackbirdZone(blackbird, sources, zone_id, zone_name, unique_id, entity_prefix)
         hass.data[DATA_BLACKBIRD][unique_id] = device
         devices.append(device)
 
@@ -221,7 +226,7 @@ class BlackbirdZone(MediaPlayerEntity):
         | MediaPlayerEntityFeature.SELECT_SOURCE
     )
 
-    def __init__(self, blackbird, sources, zone_id, zone_name, unique_id=None):
+    def __init__(self, blackbird, sources, zone_id, zone_name, unique_id=None, entity_prefix=""):
         """Initialize new zone."""
         self._blackbird = blackbird
         self._source_id_name = sources
@@ -231,8 +236,17 @@ class BlackbirdZone(MediaPlayerEntity):
         )
         self._zone_id = zone_id
         self._attr_name = zone_name
+        self._entity_prefix = entity_prefix
         if unique_id:
             self._attr_unique_id = unique_id
+
+    @property
+    def suggested_object_id(self) -> str | None:
+        """Suggest entity_id with optional prefix (e.g. 'matrix_great_room')."""
+        if not self._entity_prefix:
+            return None
+        from homeassistant.util.slugify import slugify
+        return f"{slugify(self._entity_prefix)}_{slugify(self._attr_name)}"
 
     def update(self) -> None:
         """Retrieve latest state."""
