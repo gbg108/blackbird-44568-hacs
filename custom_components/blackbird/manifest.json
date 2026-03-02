@@ -1,0 +1,11 @@
+{
+  "domain": "blackbird",
+  "name": "Monoprice Blackbird Matrix Switch",
+  "codeowners": [],
+  "documentation": "https://github.com/home-assistant/core/blob/dev/homeassistant/components/blackbird",
+  "iot_class": "local_polling",
+  "loggers": ["pyblackbird"],
+  "quality_scale": "legacy",
+  "requirements": ["pyblackbird==0.6"],
+  "version": "1.0.0"
+}
