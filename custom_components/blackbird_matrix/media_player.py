@@ -159,7 +159,7 @@ async def async_setup_platform(
     for zone_id, extra in config[CONF_ZONES].items():
         _LOGGER.debug("Adding zone %d - %s", zone_id, extra[CONF_NAME])
         unique_id = f"{connection}-{zone_id}"
-        device = BlackbirdZone(blackbird, sources, zone_id, extra[CONF_NAME])
+        device = BlackbirdZone(blackbird, sources, zone_id, extra[CONF_NAME], unique_id)
         hass.data[DATA_BLACKBIRD][unique_id] = device
         devices.append(device)
 
@@ -221,7 +221,7 @@ class BlackbirdZone(MediaPlayerEntity):
         | MediaPlayerEntityFeature.SELECT_SOURCE
     )
 
-    def __init__(self, blackbird, sources, zone_id, zone_name):
+    def __init__(self, blackbird, sources, zone_id, zone_name, unique_id=None):
         """Initialize new zone."""
         self._blackbird = blackbird
         self._source_id_name = sources
@@ -231,12 +231,12 @@ class BlackbirdZone(MediaPlayerEntity):
         )
         self._zone_id = zone_id
         self._attr_name = zone_name
+        if unique_id:
+            self._attr_unique_id = unique_id
 
-    async def async_update(self) -> None:
-        """Retrieve latest state (runs in executor to avoid blocking the event loop)."""
-        state = await self.hass.async_add_executor_job(
-            self._blackbird.zone_status, self._zone_id
-        )
+    def update(self) -> None:
+        """Retrieve latest state."""
+        state = self._blackbird.zone_status(self._zone_id)
         if not state:
             return
         self._attr_state = (
@@ -257,10 +257,10 @@ class BlackbirdZone(MediaPlayerEntity):
         _LOGGER.warning("Blackbird: set_all_zones → source=%s idx=%d", source, idx)
         self._blackbird.set_all_zone_source(idx)
 
-    async def async_select_source(self, source: str) -> None:
-        """Select input source."""
+    def select_source(self, source: str) -> None:
+        """Set input source."""
         _LOGGER.warning(
-            "Blackbird: async_select_source called zone=%d source=%r",
+            "Blackbird: select_source called zone=%d source=%r",
             self._zone_id, source,
         )
         if source not in self._source_name_id:
@@ -273,20 +273,14 @@ class BlackbirdZone(MediaPlayerEntity):
         _LOGGER.warning(
             "Blackbird: routing input %d → output (zone) %d", idx, self._zone_id
         )
-        await self.hass.async_add_executor_job(
-            self._blackbird.set_zone_source, self._zone_id, idx
-        )
+        self._blackbird.set_zone_source(self._zone_id, idx)
 
-    async def async_turn_on(self) -> None:
+    def turn_on(self) -> None:
         """Turn the media player on."""
-        _LOGGER.warning("Blackbird: async_turn_on zone=%d", self._zone_id)
-        await self.hass.async_add_executor_job(
-            self._blackbird.set_zone_power, self._zone_id, True
-        )
+        _LOGGER.warning("Blackbird: turn_on zone=%d", self._zone_id)
+        self._blackbird.set_zone_power(self._zone_id, True)
 
-    async def async_turn_off(self) -> None:
+    def turn_off(self) -> None:
         """Turn the media player off."""
-        _LOGGER.warning("Blackbird: async_turn_off zone=%d", self._zone_id)
-        await self.hass.async_add_executor_job(
-            self._blackbird.set_zone_power, self._zone_id, False
-        )
+        _LOGGER.warning("Blackbird: turn_off zone=%d", self._zone_id)
+        self._blackbird.set_zone_power(self._zone_id, False)
