@@ -21,6 +21,7 @@ from homeassistant.const import (
 )
 from homeassistant.const import EVENT_CALL_SERVICE
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
@@ -165,17 +166,6 @@ async def async_setup_platform(
     add_entities(devices, True)
 
     # ── Diagnostics ──────────────────────────────────────────────────────────
-    # Log entity_ids 2 s after setup (entity_id is None until add_entities
-    # completes its async scheduling).
-    async def _log_entity_ids(_now=None) -> None:
-        for device in devices:
-            _LOGGER.warning(
-                "Blackbird: zone %d entity_id=%r name=%r",
-                device._zone_id, device.entity_id, device.name,
-            )
-
-    hass.async_call_later(2, _log_entity_ids)
-
     # Log every media_player service call at the event-bus level so we can
     # see whether the UI is sending select_source at all.
     @callback
@@ -188,6 +178,17 @@ async def async_setup_platform(
             )
 
     hass.bus.async_listen(EVENT_CALL_SERVICE, _log_media_player_svc)
+
+    # Log entity_ids 2 s after setup (entity_id is None until add_entities
+    # completes its async scheduling).
+    async def _log_entity_ids(_now=None) -> None:
+        for device in devices:
+            _LOGGER.warning(
+                "Blackbird: zone %d entity_id=%r name=%r",
+                device._zone_id, device.entity_id, device.name,
+            )
+
+    async_call_later(hass, 2, _log_entity_ids)
     # ─────────────────────────────────────────────────────────────────────────
 
     async def async_service_handle(service: ServiceCall) -> None:
