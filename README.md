@@ -69,6 +69,10 @@ media_player:
 - **39670** uses the [39670 RS-232 guide](https://downloads.monoprice.com/files/manuals/39670_RS-232_210210.pdf) (`OUTxx:yy`, `@OUTxx`, `$OUTxx`, `STA_VIDEO`, `STA_POUT`).
 - Use **`platform: blackbird_matrix`** so config validation accepts `model` and `baud`. The core **blackbird** integration remains available if you use `platform: blackbird` (without `model`).
 
+## Repository layout
+
+The **entire** HACS/repository content lives under this repository root (`blackbird-44568-hacs/`): `custom_components/blackbird_matrix/`, `hacs.json`, `README.md`, `info.md`, etc. There is no other copy of the integration in this repo. For local development, you can symlink your Home Assistant config’s `custom_components/blackbird_matrix` to `blackbird-44568-hacs/custom_components/blackbird_matrix` so the running instance uses this tree.
+
 ## Publishing a release (for HACS)
 
 HACS expects a release asset named `blackbird_matrix.zip`. From the repo root:
