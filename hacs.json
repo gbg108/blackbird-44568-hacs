@@ -1,7 +1,6 @@
 {
   "name": "Monoprice Blackbird Matrix (44568 / 39670 / legacy)",
-  "render_readme": true,
-  "content_in_root": true,
-  "filename": null,
-  "homeassistant": "2024.1.0"
+  "homeassistant": "2024.1.0",
+  "zip_release": true,
+  "filename": "blackbird.zip"
 }

@@ -16,7 +16,7 @@ Home Assistant custom integration for **Monoprice Blackbird** matrix switches. S
 3. Category: **Integration**
 4. Click **Add**, then search for **Monoprice Blackbird Matrix Switch** and install.
 
-If you see "No manifest.json file found", use the HTTPS URL above (not `git@github.com:...`) and ensure the repo’s default branch (e.g. `main`) has been pushed with all files.
+**Note:** This repo uses a zip release (like [home-assistant-rivian](https://github.com/bretterer/home-assistant-rivian)). You must have at least one [GitHub Release](https://github.com/gbg108/blackbird-44568-hacs/releases) with an asset named `blackbird.zip`. See **Publishing a release** below.
 
 After install, restart Home Assistant and set `model: 44568` (or `39670` / `legacy`) in your Blackbird `media_player` config (see below).
 
@@ -68,3 +68,13 @@ media_player:
 - **44568** uses the protocol from the [PN 44568 manual](https://downloads.monoprice.com/files/manuals/44568_Manual_230712.pdf) (`s in x av out y!`, `r av out 0!`, `s hdmi y stream z!`, etc.).
 - **39670** uses the [39670 RS-232 guide](https://downloads.monoprice.com/files/manuals/39670_RS-232_210210.pdf) (`OUTxx:yy`, `@OUTxx`, `$OUTxx`, `STA_VIDEO`, `STA_POUT`).
 - This integration replaces the core **blackbird** integration when installed (same `domain`). To use core again, remove this custom integration.
+
+## Publishing a release (for HACS)
+
+HACS expects a release asset named `blackbird.zip`. From the repo root:
+
+```bash
+zip -r blackbird.zip custom_components/
+```
+
+Then create a new [GitHub Release](https://github.com/gbg108/blackbird-44568-hacs/releases/new) (tag e.g. `v1.0.0`), attach `blackbird.zip`, and publish. HACS will offer that release when users install or update.
