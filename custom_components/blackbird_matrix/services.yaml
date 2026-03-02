@@ -5,7 +5,7 @@ set_all_zones:
       example: "media_player.zone_1"
       selector:
         entity:
-          integration: blackbird
+          integration: blackbird_matrix
           domain: media_player
     source:
       required: true

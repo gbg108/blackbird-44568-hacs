@@ -1,5 +1,5 @@
 {
-  "domain": "blackbird",
+  "domain": "blackbird_matrix",
   "name": "Monoprice Blackbird Matrix Switch",
   "codeowners": ["@gbg108"],
   "documentation": "https://github.com/gbg108/blackbird-44568-hacs",

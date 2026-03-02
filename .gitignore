@@ -1,5 +1,6 @@
 # Build / release
 blackbird.zip
+blackbird_matrix.zip
 *.zip
 
 # Python

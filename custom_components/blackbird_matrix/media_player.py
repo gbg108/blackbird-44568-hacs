@@ -47,7 +47,7 @@ SOURCE_SCHEMA = vol.Schema({vol.Required(CONF_NAME): cv.string})
 CONF_ZONES = "zones"
 CONF_SOURCES = "sources"
 
-DATA_BLACKBIRD = "blackbird"
+DATA_BLACKBIRD = "blackbird_matrix"
 
 ATTR_SOURCE = "source"
 
