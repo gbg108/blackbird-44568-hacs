@@ -245,8 +245,9 @@ class BlackbirdZone(MediaPlayerEntity):
         """Suggest entity_id with optional prefix (e.g. 'matrix_great_room')."""
         if not self._entity_prefix:
             return None
-        from homeassistant.util.slugify import slugify
-        return f"{slugify(self._entity_prefix)}_{slugify(self._attr_name)}"
+        def _slug(s: str) -> str:
+            return s.lower().strip().replace(" ", "_")
+        return f"{_slug(self._entity_prefix)}_{_slug(self._attr_name)}"
 
     def update(self) -> None:
         """Retrieve latest state."""
