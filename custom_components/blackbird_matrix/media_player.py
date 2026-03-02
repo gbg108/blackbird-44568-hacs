@@ -174,15 +174,30 @@ async def async_setup_platform(
     # Log every media_player service call at the event-bus level so we can
     # see whether the UI is sending select_source at all.
     @callback
-    def _log_media_player_svc(event: Event) -> None:
-        if event.data.get("domain") == "media_player":
+    def _log_all_svc(event: Event) -> None:
+        domain = event.data.get("domain", "")
+        service = event.data.get("service", "")
+        svc_data = event.data.get("service_data") or {}
+        # Always log media_player services; log everything else only if it
+        # mentions one of our entity_ids so the log stays readable.
+        entity_ids = svc_data.get("entity_id", "")
+        our_ids = {"great_room", "sunroom", "basement", "loft",
+                   "office", "gym", "shop", "master_bedroom"}
+        mentions_us = any(eid in str(entity_ids) for eid in our_ids)
+        if domain == "media_player" or mentions_us:
             _LOGGER.warning(
-                "Blackbird: media_player service fired: service=%s data=%r",
-                event.data.get("service"),
-                event.data.get("service_data"),
+                "Blackbird: service fired: domain=%s service=%s data=%r",
+                domain, service, svc_data,
+            )
+        else:
+            # Log EVERY other service call at WARNING too so we can see
+            # what the frontend sends when the source dropdown is used.
+            _LOGGER.warning(
+                "Blackbird: ALL svc: domain=%s service=%s",
+                domain, service,
             )
 
-    hass.bus.async_listen(EVENT_CALL_SERVICE, _log_media_player_svc)
+    hass.bus.async_listen(EVENT_CALL_SERVICE, _log_all_svc)
 
     # Log entity_ids 2 s after setup (entity_id is None until add_entities
     # completes its async scheduling).
