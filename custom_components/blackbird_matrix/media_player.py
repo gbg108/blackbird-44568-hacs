@@ -270,7 +270,7 @@ class BlackbirdZone(MediaPlayerEntity):
         if not state:
             return
         self._attr_state = (
-            MediaPlayerState.ON if state.power else MediaPlayerState.OFF
+            MediaPlayerState.IDLE if state.power else MediaPlayerState.OFF
         )
         self._attr_source = self._source_id_name.get(state.av) if state.av else None
 
