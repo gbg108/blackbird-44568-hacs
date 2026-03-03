@@ -19,7 +19,7 @@ from homeassistant.const import (
     CONF_PORT,
     CONF_TYPE,
 )
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
@@ -151,20 +151,6 @@ def setup_platform(
 
     add_entities(devices, True)
 
-    @callback
-    def _log_all_service_calls(event):
-        """Log every service call that HA dispatches — diagnostic only."""
-        domain = event.data.get("domain", "")
-        service = event.data.get("service", "")
-        data = event.data.get("service_data", {})
-        if domain == "media_player":
-            _LOGGER.warning(
-                "DIAG EVENT_CALL_SERVICE: domain=%s service=%s data=%s",
-                domain, service, data,
-            )
-
-    hass.bus.listen("call_service", _log_all_service_calls)
-
     def service_handle(service: ServiceCall) -> None:
         """Handle for services."""
         entity_ids = service.data.get(ATTR_ENTITY_ID)
@@ -207,37 +193,15 @@ class BlackbirdZone(MediaPlayerEntity):
         self._attr_name = zone_name
         if unique_id:
             self._attr_unique_id = unique_id
-        _LOGGER.warning(
-            "DIAG __init__ zone=%d name=%r supported_features=%s",
-            zone_id, zone_name, self._attr_supported_features,
-        )
-
-    @property
-    def supported_features(self):
-        """Return supported features — logged so we can verify SELECT_SOURCE is present."""
-        feats = (
-            MediaPlayerEntityFeature.TURN_ON
-            | MediaPlayerEntityFeature.TURN_OFF
-            | MediaPlayerEntityFeature.SELECT_SOURCE
-        )
-        _LOGGER.debug(
-            "DIAG supported_features zone=%d value=%s", self._zone_id, feats
-        )
-        return feats
 
     def update(self) -> None:
         """Retrieve latest state."""
         state = self._blackbird.zone_status(self._zone_id)
         if not state:
-            _LOGGER.warning("DIAG update zone=%d — no state returned", self._zone_id)
             return
-        new_state = MediaPlayerState.ON if state.power else MediaPlayerState.OFF
-        _LOGGER.debug(
-            "DIAG update zone=%d power=%s av=%s → state=%s source=%r",
-            self._zone_id, state.power, state.av, new_state,
-            self._source_id_name.get(state.av) if state.av else None,
+        self._attr_state = (
+            MediaPlayerState.ON if state.power else MediaPlayerState.OFF
         )
-        self._attr_state = new_state
         self._attr_source = self._source_id_name.get(state.av) if state.av else None
 
     @property
@@ -253,54 +217,20 @@ class BlackbirdZone(MediaPlayerEntity):
         _LOGGER.debug("Setting all zones source to %s", idx)
         self._blackbird.set_all_zone_source(idx)
 
-    # ------------------------------------------------------------------ #
-    # Synchronous action hooks                                             #
-    # ------------------------------------------------------------------ #
-
     def select_source(self, source: str) -> None:
         """Set input source."""
-        _LOGGER.warning(
-            "DIAG select_source (SYNC) called zone=%d source=%r", self._zone_id, source
-        )
         if source not in self._source_name_id:
-            _LOGGER.warning(
-                "DIAG select_source zone=%d source=%r NOT in source map %s",
-                self._zone_id, source, list(self._source_name_id.keys()),
-            )
             return
         idx = self._source_name_id[source]
-        _LOGGER.warning(
-            "DIAG select_source routing input %d → zone %d", idx, self._zone_id
-        )
+        _LOGGER.debug("Setting zone %d source to %s", self._zone_id, idx)
         self._blackbird.set_zone_source(self._zone_id, idx)
 
     def turn_on(self) -> None:
         """Turn the media player on."""
-        _LOGGER.warning("DIAG turn_on (SYNC) zone=%d", self._zone_id)
+        _LOGGER.debug("Turning zone %d on", self._zone_id)
         self._blackbird.set_zone_power(self._zone_id, True)
 
     def turn_off(self) -> None:
         """Turn the media player off."""
-        _LOGGER.warning("DIAG turn_off (SYNC) zone=%d", self._zone_id)
+        _LOGGER.debug("Turning zone %d off", self._zone_id)
         self._blackbird.set_zone_power(self._zone_id, False)
-
-    # ------------------------------------------------------------------ #
-    # Async wrappers — overridden so we can log if HA calls these instead #
-    # ------------------------------------------------------------------ #
-
-    async def async_select_source(self, source: str) -> None:
-        """Async wrapper for select_source — logs entry then delegates."""
-        _LOGGER.warning(
-            "DIAG async_select_source called zone=%d source=%r", self._zone_id, source
-        )
-        await self.hass.async_add_executor_job(self.select_source, source)
-
-    async def async_turn_on(self) -> None:
-        """Async wrapper for turn_on."""
-        _LOGGER.warning("DIAG async_turn_on called zone=%d", self._zone_id)
-        await self.hass.async_add_executor_job(self.turn_on)
-
-    async def async_turn_off(self) -> None:
-        """Async wrapper for turn_off."""
-        _LOGGER.warning("DIAG async_turn_off called zone=%d", self._zone_id)
-        await self.hass.async_add_executor_job(self.turn_off)
