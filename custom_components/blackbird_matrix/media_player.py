@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import re
 
 import voluptuous as vol
 
@@ -145,13 +144,9 @@ def setup_platform(
     for zone_id, extra in config[CONF_ZONES].items():
         zone_name = extra[CONF_NAME]
         _LOGGER.debug("Adding zone %d - %s", zone_id, zone_name)
-        device = BlackbirdZone(blackbird, sources, zone_id, zone_name)
-        # Derive a stable entity_id from the zone name (matching what HA would
-        # generate) so we don't collide with any stale registry entries.
-        slug = re.sub(r"[^a-z0-9]+", "_", zone_name.lower()).strip("_")
-        device.entity_id = f"media_player.{slug}"
-        dict_key = f"{connection}-{zone_id}"
-        hass.data[DATA_BLACKBIRD][dict_key] = device
+        unique_id = f"{connection}-{zone_id}"
+        device = BlackbirdZone(blackbird, sources, zone_id, zone_name, unique_id)
+        hass.data[DATA_BLACKBIRD][unique_id] = device
         devices.append(device)
 
     add_entities(devices, True)
@@ -200,7 +195,7 @@ class BlackbirdZone(MediaPlayerEntity):
         | MediaPlayerEntityFeature.SELECT_SOURCE
     )
 
-    def __init__(self, blackbird, sources, zone_id, zone_name):
+    def __init__(self, blackbird, sources, zone_id, zone_name, unique_id=None):
         """Initialize new zone."""
         self._blackbird = blackbird
         self._source_id_name = sources
@@ -210,6 +205,8 @@ class BlackbirdZone(MediaPlayerEntity):
         )
         self._zone_id = zone_id
         self._attr_name = zone_name
+        if unique_id:
+            self._attr_unique_id = unique_id
         _LOGGER.warning(
             "DIAG __init__ zone=%d name=%r supported_features=%s",
             zone_id, zone_name, self._attr_supported_features,
