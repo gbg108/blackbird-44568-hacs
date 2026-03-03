@@ -143,9 +143,9 @@ def setup_platform(
     devices = []
     for zone_id, extra in config[CONF_ZONES].items():
         _LOGGER.debug("Adding zone %d - %s", zone_id, extra[CONF_NAME])
-        device = BlackbirdZone(blackbird, sources, zone_id, extra[CONF_NAME])
-        unique_key = f"{connection}-{zone_id}"
-        hass.data[DATA_BLACKBIRD][unique_key] = device
+        unique_id = f"{connection}-{zone_id}"
+        device = BlackbirdZone(blackbird, sources, zone_id, extra[CONF_NAME], unique_id)
+        hass.data[DATA_BLACKBIRD][unique_id] = device
         devices.append(device)
 
     add_entities(devices, True)
@@ -180,7 +180,7 @@ class BlackbirdZone(MediaPlayerEntity):
         | MediaPlayerEntityFeature.SELECT_SOURCE
     )
 
-    def __init__(self, blackbird, sources, zone_id, zone_name):
+    def __init__(self, blackbird, sources, zone_id, zone_name, unique_id=None):
         """Initialize new zone."""
         self._blackbird = blackbird
         self._source_id_name = sources
@@ -190,6 +190,8 @@ class BlackbirdZone(MediaPlayerEntity):
         )
         self._zone_id = zone_id
         self._attr_name = zone_name
+        if unique_id:
+            self._attr_unique_id = unique_id
 
     def update(self) -> None:
         """Retrieve latest state."""
