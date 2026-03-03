@@ -23,6 +23,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.entity import async_generate_entity_id
 
 from .const import (
     DOMAIN,
@@ -144,8 +145,15 @@ def setup_platform(
     for zone_id, extra in config[CONF_ZONES].items():
         zone_name = extra[CONF_NAME]
         _LOGGER.debug("Adding zone %d - %s", zone_id, zone_name)
-        unique_id = f"{connection}-{zone_id}"
+        # Prefix unique_id to make it distinct/safer
+        unique_id = f"{connection}-blackbird-{zone_id}"
+        # Generate prefixed entity_id
+        prefixed_slug = f"blackbird_{zone_name}"
+        entity_id = async_generate_entity_id(
+            "media_player.{}", prefixed_slug, hass=hass
+        )
         device = BlackbirdZone(blackbird, sources, zone_id, zone_name, unique_id)
+        device.entity_id = entity_id  # Override the auto-generated one
         hass.data[DATA_BLACKBIRD][unique_id] = device
         devices.append(device)
 
